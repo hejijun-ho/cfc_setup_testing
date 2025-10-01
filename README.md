@@ -4,7 +4,7 @@
 ## ledger TEE generation steps
 ### setup
 ```
-cd cfc_setup/
+cd cfc_setup_testing/
 ./ledger/ledger_v5.sh
 cp ./ledger/launcher.rs /mydata/google_parfait_build/oak/oak_launcher_utils/src
 sudo apt update
@@ -19,7 +19,7 @@ sudo usermod -a -G kvm $USER
 ## data-process TEE generation steps
 ### setup
 ```
-cd cfc_setup/
+cd cfc_setup_testing/
 ./dptee/setup_data_processing_tee.sh
 sudo apt update
 sudo apt install -y qemu-system-x86 qemu-utils
@@ -31,6 +31,17 @@ sudo usermod -a -G kvm $USER
 ./dptee/run_data_processing_tee.sh
 ```
 
+### connection test / fixed_request_test (以下用 launcher_sending_test 舉例)
+```
+cd cfc_setup_testing/
+mv ledger/WORKSPACE /mydata/google_parfait_build/confidential-federated-compute
+cp ledger/ledger_sending_test/channel_fix.patch /mydata/google_parfait_build/confidential-federated-compute/third_party/oak
+cp ledger/ledger_sending_test/launcher.rs /mydata/google_parfait_build/oak/oak_launcher_utils/src
+./ledger/generate_ledger.sh
+```
+
+
+
 ## examples/ 預期的使用方式 (實作對 ledger 的連線)
 ```
 mv ./examples /mydata/google_parfait_build/oak/
@@ -41,14 +52,3 @@ bazelisk run //examples/ledger_client:ledger_client
 ## test for ledger TEE connection
 - 目前測試方式是用telnet 連接 ledger電腦 的 port 46787，資料輸入後telnet主動關閉連線，觀察ledger電腦的輸出
 - ledger 提供的 api 來源: federated-compute/fcp/protos/confidentialcompute/ledger.proto
-
-## 目前狀況
-- SEV-ES 執行測試: 由於 launcher.rs 最初提供的 cpu架構 cmd.args(["-cpu", "IvyBridge-IBRS"]); 是必然無法順利執行 sev-es 的，因為是 Intel 的架構
-- 這是我目前嘗試運行的架構，可以順利運行，雖然還沒有跑 SEV-ES
-```
-cmd.args([
-        "-cpu", "EPYC-v4",
-        "-machine", "microvm,acpi=on", // 保留 microvm
-    ]);
-```
-- 但是以這個架構再加入跑 SEV-ES 會失敗
