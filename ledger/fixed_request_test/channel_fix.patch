@@ -1,0 +1,58 @@
+--- oak_restricted_kernel_sdk/src/channel.rs
++++ oak_restricted_kernel_sdk/src/channel.rs
+@@ -23,6 +23,7 @@ use anyhow::{anyhow, Context};
+ use oak_channel::Channel;
+ pub use oak_channel::{Read, Write};
+ use oak_core::samplestore::SampleStore;
++use oak_core::timer::Timer;
+ use oak_restricted_kernel_interface::OAK_CHANNEL_FD;
+ 
+ /// Channel that communicates over a file descriptor.
+@@ -91,14 +92,33 @@ pub fn start_blocking_server<T: micro_rpc::Transport<Error = !>>(
+     let channel_handle = &mut oak_channel::server::ServerChannelHandle::new(channel);
+     loop {
+         log::debug!("waiting for a request message");
+-        let (request_message, timer) =
+-            channel_handle.read_request().context("couldn't receive message")?;
++        log::debug!("waiting for a request message <GOOD PATCH>");
++
++        let response_message_tmp = oak_channel::message::ResponseMessage {  ///////////// can not successfully arrive (get empty list and not blocked) in launcher.rs
++            invocation_id: 10,
++            body: b"qwertyuiop\n".to_vec(),
++        };
++        // log::debug!("<testing result>: ");
++        // log::debug!("{:?}", response_message_tmp);  ///////////////
++        // channel_handle.write_response(response_message_tmp)?; /////////
++        // log::debug!("~~~~~~~~<testing send>~~~~~~");
++        // loop{}
++
++        log::warn!("BEGIN DEBUG: using constant request");
++        let request_message = oak_channel::message::RequestMessage {  // constant request
++            invocation_id: 42,
++            body: b"constant request body".to_vec(),
++        };
++        let timer = Timer::new_rdtsc();
++        log::warn!("END DEBUG: using constant request");
+         let request_message_invocation_id = request_message.invocation_id;
+         log::debug!(
+             "received request message with invocation id {} ({} bytes)",
+             request_message_invocation_id,
+             request_message.body.len()
+         );
++
++
+         let response = server.invoke(request_message.body.as_ref()).into_ok();
+         log::debug!(
+             "sending response message with invocation id {} ({} bytes)",
+@@ -109,7 +129,10 @@ pub fn start_blocking_server<T: micro_rpc::Transport<Error = !>>(
+             invocation_id: request_message_invocation_id,
+             body: response,
+         };
+-        channel_handle.write_response(response_message)?;
++        log::debug!("finish processing !!!");
++        // channel_handle.write_response(response_message)?;
+         stats.record(timer.elapsed());
++
++        loop{}
+     }
+ }
